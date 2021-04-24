@@ -19,12 +19,12 @@ namespace CsvHelper
 		/// <summary>
 		/// The field index.
 		/// </summary>
-		public int FieldIndex { get; init; }
+		public readonly int FieldIndex;
 
 		/// <summary>
 		/// The context.
 		/// </summary>
-		public CsvContext Context { get; init; }
+		public readonly CsvContext Context;
 
 		/// <summary>
 		/// Creates a new instance of GetDynamicPropertyNameArgs.

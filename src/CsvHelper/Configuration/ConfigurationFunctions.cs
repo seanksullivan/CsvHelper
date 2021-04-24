@@ -125,7 +125,7 @@ namespace CsvHelper.Configuration
 		}
 
 		/// <summary>
-		/// Returns <c>true</c> if <paramref name="type"/>:
+		/// Returns <c>true</c> if <paramref name="args.ParameterType"/>:
 		/// 1. does not have a parameterless constructor
 		/// 2. has a constructor
 		/// 3. is not a user defined struct
@@ -165,7 +165,8 @@ namespace CsvHelper.Configuration
 			}
 
 			var header = args.Context.Reader.HeaderRecord[args.FieldIndex];
-			header = args.Context.Reader.Configuration.PrepareHeaderForMatch(new PrepareHeaderForMatchArgs(header, args.FieldIndex));
+			var prepareHeaderForMatchArgs = new PrepareHeaderForMatchArgs(header, args.FieldIndex);
+			header = args.Context.Reader.Configuration.PrepareHeaderForMatch(prepareHeaderForMatchArgs);
 
 			return header;
 		}

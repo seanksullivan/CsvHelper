@@ -2,7 +2,7 @@
 // This file is a part of CsvHelper and is dual licensed under MS-PL and Apache 2.0.
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html for MS-PL and http://opensource.org/licenses/Apache-2.0 for Apache 2.0.
 // https://github.com/JoshClose/CsvHelper
-using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -29,7 +29,7 @@ namespace CsvHelper.Configuration
 		bool LeaveOpen { get; }
 
 		/// <summary>
-		/// The newline string to use. Default is <see cref="Environment.NewLine"/>.
+		/// The newline string to use. Default is \r\n (CRLF).
 		/// When writing, this value is always used.
 		/// When reading, this value is only used if explicitly set.
 		/// If not set, the parser uses one of \r\n, \r, or \n.
@@ -81,7 +81,6 @@ namespace CsvHelper.Configuration
 		/// has bad data if it contains a quote and the field is not quoted (escaped).
 		/// You can supply your own function to do other things like logging the issue
 		/// instead of throwing an exception.
-		/// Arguments: context
 		/// </summary>
 		BadDataFound BadDataFound { get; }
 
@@ -118,10 +117,22 @@ namespace CsvHelper.Configuration
 		char Quote { get; }
 
 		/// <summary>
-		/// Gets the delimiter used to separate fields.
+		/// The delimiter used to separate fields.
 		/// Default is <see cref="TextInfo.ListSeparator"/>.
 		/// </summary>
 		string Delimiter { get; }
+
+		/// <summary>
+		/// Detect the delimiter instead of using the delimiter from configuration.
+		/// Default is <c>false</c>.
+		/// </summary>
+		bool DetectDelimiter { get; }
+
+		/// <summary>
+		/// The possible delimiter values used when detecting the delimiter.
+		/// Default is [",", ";", "|", "\t"].
+		/// </summary>
+		string[] DetectDelimiterValues { get; }
 
 		/// <summary>
 		/// The character used to escape characters.
@@ -137,7 +148,15 @@ namespace CsvHelper.Configuration
 		/// <summary>
 		/// Characters considered whitespace.
 		/// Used when trimming fields.
+		/// Default is [' ', '\t'].
 		/// </summary>
 		char[] WhiteSpaceChars { get; }
+
+		/// <summary>
+		/// A value indicating if exception messages contain raw CSV data.
+		/// <c>true</c> if exception contain raw CSV data, otherwise <c>false</c>.
+		/// Default is <c>true</c>.
+		/// </summary>
+		bool ExceptionMessagesContainRawData { get; }
 	}
 }

@@ -3,7 +3,7 @@
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html for MS-PL and http://opensource.org/licenses/Apache-2.0 for Apache 2.0.
 // https://github.com/JoshClose/CsvHelper
 using CsvHelper.Configuration;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -11,10 +11,10 @@ using System.Text;
 
 namespace CsvHelper.Tests
 {
-	[TestClass]
+	
 	public class CsvWriterBoxedTypesTests
 	{
-		[TestMethod]
+		[Fact]
 		public void TypeMixedWithBoxedTypeTest()
 		{
 			var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -38,11 +38,11 @@ namespace CsvHelper.Tests
 				csv.WriteRecords(recordsBoxed);
 				writer.Flush();
 
-				var expected = new StringBuilder();
+				var expected = new TestStringBuilder(csv.Configuration.NewLine);
 				expected.AppendLine("1,one");
 				expected.AppendLine("2,two");
 
-				Assert.AreEqual(expected.ToString(), writer.ToString());
+				Assert.Equal(expected.ToString(), writer.ToString());
 			}
 		}
 	}

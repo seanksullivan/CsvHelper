@@ -137,7 +137,9 @@ namespace CsvHelper.Configuration
 		{
 			if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
 
-			return Parameter(() => ConfigurationFunctions.GetConstructor(new GetConstructorArgs(ClassType)), name);
+			var args = new GetConstructorArgs(ClassType);
+
+			return Parameter(() => ConfigurationFunctions.GetConstructor(args), name);
 		}
 
 		/// <summary>
@@ -220,7 +222,8 @@ namespace CsvHelper.Configuration
 			}
 
 			var mapParents = new LinkedList<Type>();
-			if (context.Configuration.ShouldUseConstructorParameters(new ShouldUseConstructorParametersArgs(type)))
+			var args = new ShouldUseConstructorParametersArgs(type);
+			if (context.Configuration.ShouldUseConstructorParameters(args))
 			{
 				// This type doesn't have a parameterless constructor so we can't create an
 				// instance and set it's member. Constructor parameters need to be created
@@ -397,7 +400,8 @@ namespace CsvHelper.Configuration
 						var referenceMap = new MemberReferenceMap(member, refMap);
 						if (context.Configuration.ReferenceHeaderPrefix != null)
 						{
-							referenceMap.Data.Prefix = context.Configuration.ReferenceHeaderPrefix(new ReferenceHeaderPrefixArgs(member.MemberType(), member.Name));
+							var args = new ReferenceHeaderPrefixArgs(member.MemberType(), member.Name);
+							referenceMap.Data.Prefix = context.Configuration.ReferenceHeaderPrefix(args);
 						}
 
 						ApplyAttributes(referenceMap);
@@ -440,7 +444,8 @@ namespace CsvHelper.Configuration
 		protected virtual void AutoMapConstructorParameters(ClassMap map, CsvContext context, LinkedList<Type> mapParents, int indexStart = 0)
 		{
 			var type = map.GetGenericType();
-			var constructor = context.Configuration.GetConstructor(new GetConstructorArgs(map.ClassType));
+			var args = new GetConstructorArgs(map.ClassType);
+			var constructor = context.Configuration.GetConstructor(args);
 			var parameters = constructor.GetParameters();
 
 			foreach (var parameter in parameters)
@@ -488,7 +493,8 @@ namespace CsvHelper.Configuration
 					var referenceMap = new ParameterReferenceMap(parameter, refMap);
 					if (context.Configuration.ReferenceHeaderPrefix != null)
 					{
-						referenceMap.Data.Prefix = context.Configuration.ReferenceHeaderPrefix(new ReferenceHeaderPrefixArgs(memberTypeInfo.MemberType(), memberTypeInfo.Name));
+						var referenceHeaderPrefix = new ReferenceHeaderPrefixArgs(memberTypeInfo.MemberType(), memberTypeInfo.Name);
+						referenceMap.Data.Prefix = context.Configuration.ReferenceHeaderPrefix(referenceHeaderPrefix);
 					}
 
 					ApplyAttributes(referenceMap);

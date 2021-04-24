@@ -20,7 +20,7 @@ namespace CsvHelper
 		/// <summary>
 		/// The parameter type.
 		/// </summary>
-		public Type ParameterType { get; init; }
+		public readonly Type ParameterType;
 
 		/// <summary>
 		/// Creates a new instance of ShouldUseConstructorParametersArgs.

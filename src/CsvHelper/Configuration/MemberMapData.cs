@@ -5,6 +5,7 @@
 using System.Reflection;
 using CsvHelper.TypeConversion;
 using System.Linq.Expressions;
+using System;
 
 namespace CsvHelper.Configuration
 {
@@ -13,6 +14,32 @@ namespace CsvHelper.Configuration
 	/// </summary>
 	public class MemberMapData
 	{
+		/// <summary>
+		/// Gets the member type.
+		/// </summary>
+		public virtual Type Type
+		{
+			get
+			{
+				if (Member != null)
+				{
+					return Member.MemberType();
+				}
+
+				if (IsConstantSet)
+				{
+					return Constant?.GetType() ?? typeof(string);
+				}
+
+				if (IsDefaultSet)
+				{
+					return Default?.GetType() ?? typeof(string);
+				}
+
+				return typeof(string);
+			}
+		}
+
 		/// <summary>
 		/// Gets the <see cref="MemberInfo"/> that the data
 		/// is associated with.
@@ -83,6 +110,13 @@ namespace CsvHelper.Configuration
 		/// explicitly set, otherwise false.
 		/// </summary>
 		public virtual bool IsDefaultSet { get; set; }
+
+		/// <summary>
+		/// Gets or setse a value indicating if the default value should be used when
+		/// a type conversion failure happens. <c>true</c> to use the default, otherwise
+		/// <c>false</c>.
+		/// </summary>
+		public virtual bool UseDefaultOnConversionFailure { get; set; }
 
 		/// <summary>
 		/// Gets or sets the constant value used for every record.

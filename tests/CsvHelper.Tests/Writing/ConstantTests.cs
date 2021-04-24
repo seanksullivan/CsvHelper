@@ -7,14 +7,14 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using CsvHelper.Configuration;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace CsvHelper.Tests.Writing
 {
-	[TestClass]
+	
 	public class ConstantTests
 	{
-		[TestMethod]
+		[Fact]
 		public void StringConstantTest()
 		{
 			using (var stream = new MemoryStream())
@@ -33,18 +33,18 @@ namespace CsvHelper.Tests.Writing
 				writer.Flush();
 				stream.Position = 0;
 
-				var expected = new StringBuilder();
+				var expected = new TestStringBuilder(csv.Configuration.NewLine);
 				expected.AppendLine("Id,Name");
 				expected.AppendLine("1,constant");
 				expected.AppendLine("2,constant");
 
 				var result = reader.ReadToEnd();
 
-				Assert.AreEqual(expected.ToString(), result);
+				Assert.Equal(expected.ToString(), result);
 			}
 		}
 
-		[TestMethod]
+		[Fact]
 		public void NullConstantTest()
 		{
 			var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -63,11 +63,11 @@ namespace CsvHelper.Tests.Writing
 				csv.WriteRecords(records);
 				writer.Flush();
 
-				Assert.AreEqual("1,\r\n", writer.ToString());
+				Assert.Equal("1,\r\n", writer.ToString());
 			}
 		}
 
-		[TestMethod]
+		[Fact]
 		public void IntConstantTest()
 		{
 			var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -87,7 +87,7 @@ namespace CsvHelper.Tests.Writing
 				csv.WriteRecords(records);
 				writer.Flush();
 
-				Assert.AreEqual("-1,one\r\n", writer.ToString());
+				Assert.Equal("-1,one\r\n", writer.ToString());
 			}
 		}
 

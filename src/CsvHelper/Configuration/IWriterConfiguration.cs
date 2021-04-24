@@ -1,10 +1,8 @@
-﻿// Copyright 2009-2021 Josh Close
+// Copyright 2009-2021 Josh Close
 // This file is a part of CsvHelper and is dual licensed under MS-PL and Apache 2.0.
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html for MS-PL and http://opensource.org/licenses/Apache-2.0 for Apache 2.0.
 // https://github.com/JoshClose/CsvHelper
-using System;
 using System.Globalization;
-using CsvHelper.TypeConversion;
 using System.Collections.Generic;
 using System.IO;
 
@@ -70,7 +68,7 @@ namespace CsvHelper.Configuration
 		char InjectionEscapeCharacter { get; }
 
 		/// <summary>
-		/// The newline string to use. Default is <see cref="Environment.NewLine"/>.
+		/// The newline string to use. Default is \r\n (CRLF).
 		/// When writing, this value is always used.
 		/// When reading, this value is only used if explicitly set. If not set,
 		/// the parser uses one of \r\n, \r, or \n.
@@ -88,7 +86,6 @@ namespace CsvHelper.Configuration
 		/// <summary>
 		/// Gets a function that is used to determine if a field should get quoted 
 		/// when writing.
-		/// Arguments: field, context
 		/// </summary>
 		ShouldQuote ShouldQuote { get; }
 
@@ -132,7 +129,6 @@ namespace CsvHelper.Configuration
 
 		/// <summary>
 		/// Gets a callback that will return the prefix for a reference header.
-		/// Arguments: memberType, memberName
 		/// </summary>
 		ReferenceHeaderPrefix ReferenceHeaderPrefix { get; }
 
@@ -159,5 +155,12 @@ namespace CsvHelper.Configuration
 		/// were created with.
 		/// </summary>
 		IComparer<string> DynamicPropertySort { get; }
+
+		/// <summary>
+		/// A value indicating if exception messages contain raw CSV data.
+		/// <c>true</c> if exception contain raw CSV data, otherwise <c>false</c>.
+		/// Default is <c>true</c>.
+		/// </summary>
+		bool ExceptionMessagesContainRawData { get; }
 	}
 }

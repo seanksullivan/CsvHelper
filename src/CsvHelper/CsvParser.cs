@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace CsvHelper
@@ -21,10 +22,9 @@ namespace CsvHelper
 	/// </summary>
 	public class CsvParser : IParser, IDisposable
 	{
+		private readonly CsvConfiguration configuration;
 		private readonly FieldCache fieldCache = new FieldCache();
 		private readonly TextReader reader;
-		private readonly string delimiter;
-		private readonly char delimiterFirstChar;
 		private readonly char quote;
 		private readonly char escape;
 		private readonly bool countBytes;
@@ -42,7 +42,11 @@ namespace CsvHelper
 		private readonly char newLineFirstChar;
 		private readonly bool isNewLineSet;
 		private readonly bool cacheFields;
+		private readonly string[] delimiterValues;
+		private readonly bool detectDelimiter;
 
+		private string delimiter;
+		private char delimiterFirstChar;
 		private char[] buffer;
 		private int bufferSize;
 		private int charsRead;
@@ -66,6 +70,7 @@ namespace CsvHelper
 		private int newLinePosition = 1;
 		private bool fieldIsBadData;
 		private bool fieldIsQuoted;
+		private bool isProcessingField;
 
 		/// <inheritdoc/>
 		public long CharCount => charCount;
@@ -107,13 +112,38 @@ namespace CsvHelper
 		public int RawRow => rawRow;
 
 		/// <inheritdoc/>
+		public string Delimiter => delimiter;
+
+		/// <inheritdoc/>
 		public CsvContext Context { get; private set; }
 
 		/// <inheritdoc/>
-		public IParserConfiguration Configuration { get; private set; }
+		public IParserConfiguration Configuration => configuration;
 
 		/// <inheritdoc/>
-		public string this[int index] => GetField(index);
+		public string this[int index]
+		{
+			get
+			{
+				if (isProcessingField)
+				{
+					var message =
+						$"You can't access {nameof(IParser)}[int] or {nameof(IParser)}.{nameof(IParser.Record)} inside of the {nameof(BadDataFound)} callback. " +
+						$"Use {nameof(BadDataFoundArgs)}.{nameof(BadDataFoundArgs.Field)} and {nameof(BadDataFoundArgs)}.{nameof(BadDataFoundArgs.RawRecord)} instead."
+					;
+
+					throw new ParserException(Context, message);
+				}
+
+				isProcessingField = true;
+
+				var field = GetField(index);
+
+				isProcessingField = false;
+
+				return field;
+			}
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="CsvParser"/> class.
@@ -133,7 +163,7 @@ namespace CsvHelper
 			configuration.Validate();
 
 			this.reader = reader;
-			Configuration = configuration;
+			this.configuration = configuration;
 			Context = new CsvContext(this);
 
 			allowComments = configuration.AllowComments;
@@ -144,6 +174,8 @@ namespace CsvHelper
 			countBytes = configuration.CountBytes;
 			delimiter = configuration.Delimiter;
 			delimiterFirstChar = configuration.Delimiter[0];
+			delimiterValues = configuration.DetectDelimiterValues;
+			detectDelimiter = configuration.DetectDelimiter;
 			encoding = configuration.Encoding;
 			escape = configuration.Escape;
 			ignoreBlankLines = configuration.IgnoreBlankLines;
@@ -183,6 +215,11 @@ namespace CsvHelper
 					{
 						return ReadEndOfFile();
 					}
+
+					if (row == 1 && detectDelimiter)
+					{
+						DetectDelimiter();
+					}
 				}
 
 				if (ReadLine(ref c, ref cPrev) == ReadLineResult.Complete)
@@ -212,12 +249,37 @@ namespace CsvHelper
 					{
 						return ReadEndOfFile();
 					}
+
+					if (row == 0 && detectDelimiter)
+					{
+						DetectDelimiter();
+					}
 				}
 
 				if (ReadLine(ref c, ref cPrev) == ReadLineResult.Complete)
 				{
 					return true;
 				}
+			}
+		}
+
+		private void DetectDelimiter()
+		{
+			var text = new string(buffer, 0, charsRead);
+			var delimiterCounts = new Dictionary<string, int>();
+			foreach (var delimiter in delimiterValues)
+			{
+				// Escape every character to use as regex pattern.
+				var pattern = Regex.Replace(delimiter, "(.)", "\\$1");
+				delimiterCounts[delimiter] = Regex.Matches(text, pattern).Count;
+			}
+
+			var maxCount = delimiterCounts.OrderByDescending(c => c.Value).First();
+			if (maxCount.Value > 0)
+			{
+				delimiter = maxCount.Key;
+				delimiterFirstChar = delimiter[0];
+				configuration.Validate();
 			}
 		}
 
@@ -716,6 +778,11 @@ namespace CsvHelper
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private string GetField(in int index)
 		{
+			if (index > fieldsPosition)
+			{
+				throw new IndexOutOfRangeException();
+			}
+
 			ref var field = ref fields[index];
 
 			if (field.Length == 0)
@@ -745,19 +812,16 @@ namespace CsvHelper
 					throw new InvalidOperationException($"ParseMode '{mode}' is not handled.");
 			}
 
-			if (!cacheFields)
-			{
-				return new string(processedField.Buffer, processedField.Start, processedField.Length);
-			}
-
-			var value = fieldCache.GetField(processedField.Buffer, processedField.Start, processedField.Length);
+			var value = cacheFields
+				? fieldCache.GetField(processedField.Buffer, processedField.Start, processedField.Length)
+				: new string(processedField.Buffer, processedField.Start, processedField.Length);
 
 			return value;
 		}
 
 		/// <inheritdoc/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected ProcessedField ProcessRFC4180Field(int start, int length, int quoteCount)
+		protected ProcessedField ProcessRFC4180Field(in int start, in int length, in int quoteCount)
 		{
 			var newStart = start;
 			var newLength = length;
@@ -772,12 +836,7 @@ namespace CsvHelper
 				// Not quoted.
 				// No processing needed.
 
-				return new ProcessedField
-				{
-					Buffer = buffer,
-					Start = newStart,
-					Length = newLength,
-				};
+				return new ProcessedField(newStart, newLength, buffer);
 			}
 
 			if (buffer[newStart] != quote || buffer[newStart + newLength - 1] != quote || newLength == 1 && buffer[newStart] == quote)
@@ -810,12 +869,7 @@ namespace CsvHelper
 			{
 				// The only quotes are the ends of the field.
 				// No more processing is needed.
-				return new ProcessedField
-				{
-					Buffer = buffer,
-					Start = newStart,
-					Length = newLength,
-				};
+				return new ProcessedField(newStart, newLength, buffer);
 			}
 
 			if (newLength > processFieldBuffer.Length)
@@ -851,21 +905,17 @@ namespace CsvHelper
 				position++;
 			}
 
-			return new ProcessedField
-			{
-				Buffer = processFieldBuffer,
-				Start = 0,
-				Length = position,
-			};
+			return new ProcessedField(0, position, processFieldBuffer);
 		}
 
 		/// <inheritdoc/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected ProcessedField ProcessRFC4180BadField(int start, int length)
+		protected ProcessedField ProcessRFC4180BadField(in int start, in int length)
 		{
 			// If field is already known to be bad, different rules can be applied.
 
-			badDataFound?.Invoke(new BadDataFoundArgs(new string(buffer, start, length), Context));
+			var args = new BadDataFoundArgs(new string(buffer, start, length), RawRecord, Context);
+			badDataFound?.Invoke(args);
 
 			var newStart = start;
 			var newLength = length;
@@ -878,12 +928,7 @@ namespace CsvHelper
 			if (buffer[newStart] != quote)
 			{
 				// If the field doesn't start with a quote, don't process it.
-				return new ProcessedField
-				{
-					Buffer = buffer,
-					Start = newStart,
-					Length = newLength,
-				};
+				return new ProcessedField(newStart, newLength, buffer);
 			}
 
 			if (newLength > processFieldBuffer.Length)
@@ -940,17 +985,12 @@ namespace CsvHelper
 				position++;
 			}
 
-			return new ProcessedField
-			{
-				Buffer = processFieldBuffer,
-				Start = 0,
-				Length = position,
-			};
+			return new ProcessedField(0, position, processFieldBuffer);
 		}
 
 		/// <inheritdoc/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected ProcessedField ProcessEscapeField(int start, int length)
+		protected ProcessedField ProcessEscapeField(in int start, in int length)
 		{
 			var newStart = start;
 			var newLength = length;
@@ -992,17 +1032,12 @@ namespace CsvHelper
 				position++;
 			}
 
-			return new ProcessedField
-			{
-				Buffer = processFieldBuffer,
-				Start = 0,
-				Length = position,
-			};
+			return new ProcessedField(0, position, processFieldBuffer);
 		}
 
 		/// <inheritdoc/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected ProcessedField ProcessNoEscapeField(int start, int length)
+		protected ProcessedField ProcessNoEscapeField(in int start, in int length)
 		{
 			var newStart = start;
 			var newLength = length;
@@ -1012,12 +1047,7 @@ namespace CsvHelper
 				ArrayHelper.Trim(buffer, ref newStart, ref newLength, whiteSpaceChars);
 			}
 
-			return new ProcessedField
-			{
-				Buffer = buffer,
-				Start = newStart,
-				Length = newLength,
-			};
+			return new ProcessedField(newStart, newLength, buffer);
 		}
 
 		/// <inheritdoc/>
@@ -1062,17 +1092,30 @@ namespace CsvHelper
 			/// <summary>
 			/// The start of the field in the buffer.
 			/// </summary>
-			public int Start { get; init; }
+			public readonly int Start;
 
 			/// <summary>
 			/// The length of the field in the buffer.
 			/// </summary>
-			public int Length { get; init; }
+			public readonly int Length;
 
 			/// <summary>
 			/// The buffer that contains the field.
 			/// </summary>
-			public char[] Buffer { get; init; }
+			public readonly char[] Buffer;
+
+			/// <summary>
+			/// Creates a new instance of ProcessedField.
+			/// </summary>
+			/// <param name="start">The start of the field in the buffer.</param>
+			/// <param name="length">The length of the field in the buffer.</param>
+			/// <param name="buffer">The buffer that contains the field.</param>
+			public ProcessedField(int start, int length, char[] buffer)
+			{
+				Start = start;
+				Length = length;
+				Buffer = buffer;
+			}
 		}
 
 		private enum ReadLineResult

@@ -46,6 +46,12 @@ namespace CsvHelper.Configuration
 		public virtual string Delimiter { get; set; }
 
 		/// <inheritdoc/>
+		public virtual bool DetectDelimiter { get; set; }
+
+		/// <inheritdoc/>
+		public virtual string[] DetectDelimiterValues { get; set; } = new[] { ",", ";", "|", "\t" };
+
+		/// <inheritdoc/>
 		public virtual bool DetectColumnCountChanges { get; set; }
 
 		/// <inheritdoc/>
@@ -56,6 +62,9 @@ namespace CsvHelper.Configuration
 
 		/// <inheritdoc/>
 		public virtual char Escape { get; set; } = '"';
+
+		/// <inheritdoc/>
+		public virtual bool ExceptionMessagesContainRawData { get; set; } = true;
 
 		/// <inheritdoc/>
 		public virtual GetConstructor GetConstructor { get; set; } = ConfigurationFunctions.GetConstructor;
@@ -147,7 +156,7 @@ namespace CsvHelper.Configuration
 		public virtual bool UseNewObjectForNullReferenceMembers { get; set; } = true;
 
 		/// <inheritdoc/>
-		public virtual char[] WhiteSpaceChars { get; set; } = new char[] { ' ', '\t' };
+		public virtual char[] WhiteSpaceChars { get; set; } = new char[] { ' ' };
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="CsvConfiguration"/> class
@@ -170,20 +179,27 @@ namespace CsvHelper.Configuration
 			var escape = Escape.ToString();
 			var quote = Quote.ToString();
 			var lineEndings = new[] { "\r", "\n", "\r\n" };
+			var whiteSpaceChars = WhiteSpaceChars.Select(c => c.ToString()).ToArray();
 
 			// Escape
-			if (escape == Delimiter) throw new ConfigurationException($"");
-			if (escape == NewLine && IsNewLineSet) throw new ConfigurationException($"");
-			if (lineEndings.Contains(Escape.ToString()) && !IsNewLineSet) throw new ConfigurationException($"");
+			if (escape == Delimiter) throw new ConfigurationException($"{Escape} and {Delimiter} cannot be the same.");
+			if (escape == NewLine && IsNewLineSet) throw new ConfigurationException($"{Escape} and {NewLine} cannot be the same.");
+			if (lineEndings.Contains(Escape.ToString()) && !IsNewLineSet) throw new ConfigurationException($"{Escape} cannot be a line ending. ('\\r', '\\n', '\\r\\n')");
+			if (whiteSpaceChars.Contains(escape)) throw new ConfigurationException($"{Escape} cannot be a WhiteSpaceChar.");
 
 			// Quote
-			if (quote == Delimiter) throw new ConfigurationException($"");
-			if (quote == NewLine && IsNewLineSet) throw new ConfigurationException($"");
-			if (lineEndings.Contains(quote)) throw new ConfigurationException($"");
+			if (quote == Delimiter) throw new ConfigurationException($"{Quote} and {Delimiter} cannot be the same.");
+			if (quote == NewLine && IsNewLineSet) throw new ConfigurationException($"{Quote} and {NewLine} cannot be the same.");
+			if (lineEndings.Contains(quote)) throw new ConfigurationException($"{Quote} cannot be a line ending. ('\\r', '\\n', '\\r\\n')");
+			if (whiteSpaceChars.Contains(quote)) throw new ConfigurationException($"{Quote} cannot be a WhiteSpaceChar.");
 
 			// Delimiter
-			if (Delimiter == NewLine && IsNewLineSet) throw new ConfigurationException($"");
-			if (lineEndings.Contains(Delimiter)) throw new ConfigurationException($"");
+			if (Delimiter == NewLine && IsNewLineSet) throw new ConfigurationException($"{Delimiter} and {NewLine} cannot be the same.");
+			if (lineEndings.Contains(Delimiter)) throw new ConfigurationException($"{Delimiter} cannot be a line ending. ('\\r', '\\n', '\\r\\n')");
+			if (whiteSpaceChars.Contains(Delimiter)) throw new ConfigurationException($"{Delimiter} cannot be a WhiteSpaceChar.");
+
+			// Detect Delimiter
+			if (DetectDelimiter && DetectDelimiterValues.Length == 0) throw new ConfigurationException($"At least one value is required for {nameof(DetectDelimiterValues)} when {nameof(DetectDelimiter)} is enabled.");
 		}
 	}
 }

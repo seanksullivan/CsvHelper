@@ -81,7 +81,8 @@ namespace CsvHelper.Expressions
 					// Constructor parameter type.
 					var arguments = new List<Expression>();
 					CreateConstructorArgumentExpressionsForMapping(parameterMap.ConstructorTypeMap, arguments);
-					var constructorExpression = Expression.New(reader.Configuration.GetConstructor(new GetConstructorArgs(parameterMap.ConstructorTypeMap.ClassType)), arguments);
+					var args = new GetConstructorArgs(parameterMap.ConstructorTypeMap.ClassType);
+					var constructorExpression = Expression.New(reader.Configuration.GetConstructor(args), arguments);
 
 					argumentExpressions.Add(constructorExpression);
 				}
@@ -179,7 +180,8 @@ namespace CsvHelper.Expressions
 				{
 					var arguments = new List<Expression>();
 					CreateConstructorArgumentExpressionsForMapping(referenceMap.Data.Mapping, arguments);
-					referenceBody = Expression.New(reader.Configuration.GetConstructor(new GetConstructorArgs(referenceMap.Data.Mapping.ClassType)), arguments);
+					var args = new GetConstructorArgs(referenceMap.Data.Mapping.ClassType);
+					referenceBody = Expression.New(reader.Configuration.GetConstructor(args), arguments);
 				}
 				else
 				{
@@ -202,13 +204,18 @@ namespace CsvHelper.Expressions
 			if (memberMap.Data.ReadingConvertExpression != null)
 			{
 				// The user is providing the expression to do the conversion.
-				Expression exp = Expression.Invoke(memberMap.Data.ReadingConvertExpression, Expression.Constant(new ConvertFromStringArgs { Row = reader }));
+				Expression exp = Expression.Invoke(memberMap.Data.ReadingConvertExpression, Expression.Constant(new ConvertFromStringArgs(reader)));
 				return Expression.Convert(exp, memberMap.Data.Member.MemberType());
 			}
 
 			if (!reader.CanRead(memberMap))
 			{
 				return null;
+			}
+
+			if (memberMap.Data.IsConstantSet)
+			{
+				return Expression.Convert(Expression.Constant(memberMap.Data.Constant), memberMap.Data.Member.MemberType());
 			}
 
 			if (memberMap.Data.TypeConverter == null)
@@ -259,18 +266,12 @@ namespace CsvHelper.Expressions
 				);
 			}
 
-			if (memberMap.Data.IsConstantSet)
-			{
-				fieldExpression = Expression.Convert(Expression.Constant(memberMap.Data.Constant), memberMap.Data.Member.MemberType());
-			}
-			else if (memberMap.Data.IsDefaultSet)
+			if (memberMap.Data.IsDefaultSet)
 			{
 				return CreateDefaultExpression(memberMap, fieldExpression);
 			}
-			else
-			{
-				fieldExpression = CreateTypeConverterExpression(memberMap, fieldExpression);
-			}
+
+			fieldExpression = CreateTypeConverterExpression(memberMap, fieldExpression);
 
 			return fieldExpression;
 		}

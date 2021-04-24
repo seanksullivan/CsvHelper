@@ -3,17 +3,17 @@
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html for MS-PL and http://opensource.org/licenses/Apache-2.0 for Apache 2.0.
 // https://github.com/JoshClose/CsvHelper
 using CsvHelper.Configuration;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using System.Globalization;
 using System.IO;
 using System.Text;
 
 namespace CsvHelper.Tests.Writing
 {
-	[TestClass]
+	
 	public class TrimTests
 	{
-		[TestMethod]
+		[Fact]
 		public void Test()
 		{
 			var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -31,10 +31,10 @@ namespace CsvHelper.Tests.Writing
 				writer.Flush();
 				stream.Position = 0;
 
-				var expected = new StringBuilder();
+				var expected = new TestStringBuilder(csv.Configuration.NewLine);
 				expected.AppendLine("a b c,d e f");
 
-				Assert.AreEqual(expected.ToString(), reader.ReadToEnd());
+				Assert.Equal(expected.ToString(), reader.ReadToEnd());
 			}
 		}
 	}

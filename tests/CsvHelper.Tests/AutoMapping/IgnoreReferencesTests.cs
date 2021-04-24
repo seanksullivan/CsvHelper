@@ -3,7 +3,7 @@
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html for MS-PL and http://opensource.org/licenses/Apache-2.0 for Apache 2.0.
 // https://github.com/JoshClose/CsvHelper
 using CsvHelper.Configuration;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,10 +14,10 @@ using System.Threading.Tasks;
 
 namespace CsvHelper.Tests.AutoMapping
 {
-	[TestClass]
+	
 	public class IgnoreReferencesTests
 	{
-		[TestMethod]
+		[Fact]
 		public void IgnoreReferncesWritingTest()
 		{
 			var records = new List<Foo>
@@ -39,11 +39,11 @@ namespace CsvHelper.Tests.AutoMapping
 				csv.WriteRecords(records);
 				writer.Flush();
 
-				var expected = new StringBuilder();
+				var expected = new TestStringBuilder(csv.Configuration.NewLine);
 				expected.AppendLine("Id");
 				expected.AppendLine("1");
 
-				Assert.AreEqual(expected.ToString(), writer.ToString());
+				Assert.Equal(expected.ToString(), writer.ToString());
 			}
 		}
 

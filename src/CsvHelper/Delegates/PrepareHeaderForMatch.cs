@@ -22,12 +22,12 @@ namespace CsvHelper
 		/// <summary>
 		/// The header.
 		/// </summary>
-		public string Header { get; init; }
+		public readonly string Header;
 
 		/// <summary>
 		/// The field index.
 		/// </summary>
-		public int FieldIndex { get; init; }
+		public readonly int FieldIndex;
 
 		/// <summary>
 		/// Creates a new instance of PrepareHeaderForMatchArgs.

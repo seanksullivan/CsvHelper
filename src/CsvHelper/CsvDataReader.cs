@@ -16,6 +16,7 @@ namespace CsvHelper
 	public class CsvDataReader : IDataReader
 	{
 		private readonly CsvReader csv;
+		private readonly DataTable schemaTable;
 		private bool skipNextRead;
 
 		/// <summary>
@@ -92,7 +93,8 @@ namespace CsvHelper
 		/// Initializes a new instance of the <see cref="CsvDataReader"/> class.
 		/// </summary>
 		/// <param name="csv">The CSV.</param>
-		public CsvDataReader(CsvReader csv)
+		/// <param name="schemaTable">The DataTable representing the file schema.</param>
+		public CsvDataReader(CsvReader csv, DataTable schemaTable = null)
 		{
 			this.csv = csv;
 
@@ -106,6 +108,8 @@ namespace CsvHelper
 			{
 				skipNextRead = true;
 			}
+
+			this.schemaTable = schemaTable ?? GetSchemaTable();
 		}
 
 		/// <summary>
@@ -362,12 +366,14 @@ namespace CsvHelper
 				return index;
 			}
 
-			var namePrepared = csv.Configuration.PrepareHeaderForMatch(new PrepareHeaderForMatchArgs(name, 0));
+			var args = new PrepareHeaderForMatchArgs(name, 0);
+			var namePrepared = csv.Configuration.PrepareHeaderForMatch(args);
 
 			var headerRecord = csv.HeaderRecord;
 			for (var i = 0; i < headerRecord.Length; i++)
 			{
-				var headerPrepared = csv.Configuration.PrepareHeaderForMatch(new PrepareHeaderForMatchArgs(headerRecord[i], i));
+				args = new PrepareHeaderForMatchArgs(headerRecord[i], i);
+				var headerPrepared = csv.Configuration.PrepareHeaderForMatch(args);
 				if (csv.Configuration.CultureInfo.CompareInfo.Compare(namePrepared, headerPrepared, CompareOptions.IgnoreCase) == 0)
 				{
 					return i;
@@ -385,8 +391,12 @@ namespace CsvHelper
 		/// </returns>
 		public DataTable GetSchemaTable()
 		{
-			// https://docs.microsoft.com/en-us/dotnet/api/system.data.datatablereader.getschematable?view=netframework-4.7.2
+			if (schemaTable != null)
+			{
+				return schemaTable;
+			}
 
+			// https://docs.microsoft.com/en-us/dotnet/api/system.data.datatablereader.getschematable?view=netframework-4.7.2
 			var dt = new DataTable("SchemaTable");
 			dt.Columns.Add("AllowDBNull", typeof(bool));
 			dt.Columns.Add("AutoIncrementSeed", typeof(long));
@@ -416,20 +426,21 @@ namespace CsvHelper
 
 			if (csv.Configuration.HasHeaderRecord)
 			{
-				for (var i = 0; i < csv.HeaderRecord.Length; i++)
+				var header = csv.HeaderRecord;
+
+				for (var i = 0; i < header.Length; i++)
 				{
-					var header = csv.HeaderRecord[i];
 					var row = dt.NewRow();
 					row["AllowDBNull"] = true;
 					row["AutoIncrementSeed"] = DBNull.Value;
 					row["AutoIncrementStep"] = DBNull.Value;
 					row["BaseCatalogName"] = null;
-					row["BaseColumnName"] = csv.HeaderRecord[i];
+					row["BaseColumnName"] = header[i];
 					row["BaseColumnNamespace"] = null;
 					row["BaseSchemaName"] = null;
 					row["BaseTableName"] = null;
 					row["BaseTableNamespace"] = null;
-					row["ColumnName"] = csv.HeaderRecord[i];
+					row["ColumnName"] = header[i];
 					row["ColumnMapping"] = MappingType.Element;
 					row["ColumnOrdinal"] = i;
 					row["ColumnSize"] = int.MaxValue;

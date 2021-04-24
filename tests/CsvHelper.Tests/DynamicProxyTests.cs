@@ -7,14 +7,14 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using CsvHelper.Configuration;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace CsvHelper.Tests
 {
-	[TestClass]
+	
 	public class DynamicProxyTests
 	{
-		[TestMethod]
+		[Fact]
 		public void WriteDynamicProxyObjectTest()
 		{
 			var list = new List<TestClass>();
@@ -38,11 +38,11 @@ namespace CsvHelper.Tests
 				stream.Position = 0;
 
 				var data = reader.ReadToEnd();
-				var expected = new StringBuilder();
+				var expected = new TestStringBuilder(csv.Configuration.NewLine);
 				expected.AppendLine("id,name");
 				expected.AppendLine("1,name1");
 
-				Assert.AreEqual(expected.ToString(), data);
+				Assert.Equal(expected.ToString(), data);
 			}
 		}
 
